@@ -19,11 +19,13 @@ We will upload the full implementation as soon as possible!
 ## Overview
 
 This repository contains the official implementation for **CAPO (Credit Assignment Policy Optimization)**, a novel method to enhance the reasoning abilities of Large Language Models (LLMs).
+![Overview of CAPO's verifiable credit assignment process](./capo_overview.png)
 
 ### The Challenge in RLVR: Coarse-Grained Credit Assignment
 
+![The coarse credit assignment problem in RLVR](./rlvl_challenges.png)
 
-The coarse credit assignment problem in Reinforcement Learning with Verifiable Rewards (RLVR).RLVR assigns rewards based solely on the final outcome, failing to provide **differentiated feedback**. This lack of granular feedback hinders the model’s ability to learn robust reasoning processes.
+Reinforcement Learning with Verifiable Rewards (RLVR) assigns rewards based solely on the final outcome, failing to provide **differentiated feedback**. This lack of granular feedback hinders the model’s ability to learn robust reasoning processes.
 
 While other solutions exist, they are often inaccurate (like PPO's value estimates) or require expensive, time-consuming process supervision labels (like Process Reward Models).
 
@@ -39,7 +41,7 @@ This allows the model to directly learn which parts of its reasoning to keep and
 
 ### Experiment Results
 
-Across six challenging mathematical benchmarks and three out-of-domain benchmarks, CAPO consistently outperforms SFT and other RL-based fine-tuning methods using various model backbones (Llama, Qwen). Further analysis confirms that CAPO effectively encourages the model to learn and generate correct reasoning pathways.
+Across six challenging mathematical benchmarks and three out-of-domain benchmarks, CAPO consistently outperforms SFT and other RL-based fine-tuning methods using various model backbones (Llama, Qwen). Further analysis confirms that CAPO effectively encourages the model to learn and generate correct reasoning pathways. More results could be found in our paper.
 
 ## Acknowledgements
 

@@ -1,0 +1,131 @@
+hydra:
+  searchpath:
+    - file://verl/trainer/config
+
+defaults:
+  - ppo_trainer
+  - _self_
+
+data:
+  train_files: ${oc.env:HOME}/data/math8k/train.parquet
+  val_files: ["${oc.env:HOME}/data/math500/test.parquet"]
+  # prompt_key: question
+  train_batch_size: 192
+  max_prompt_length: 2048
+  max_response_length: 2048
+  seed: 42
+
+actor_rollout_ref:
+  hybrid_engine: True
+  model:
+    use_remove_padding: True
+    enable_gradient_checkpointing: True
+    enable_activation_offload: True
+    path: Qwen/Qwen2.5-Math-1.5B
+
+  actor:
+    optim:
+      lr: 1e-5
+    ppo_mini_batch_size: 192
+    use_dynamic_bsz: True # TODO: ???
+    ppo_micro_batch_size_per_gpu: 12
+    ppo_max_token_len_per_gpu: 32768 # n * ${data.max_prompt_length} + ${data.max_response_length}
+    grad_clip: 1.0
+    clip_ratio: 0.2
+    entropy_coeff: 0.0
+    use_kl_loss: False # True for GRPO
+    kl_loss_coef: 0.001 # for grpo
+    kl_loss_type: low_var_kl # for grpo
+    ppo_epochs: 1 # Number of PPO epochs per batch
+    fsdp_config:
+      param_offload: False
+      optimizer_offload: False
+    checkpoint:
+      save_contents: ['model']
+
+  ref:
+    log_prob_micro_batch_size_per_gpu: 24
+    log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+    log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
+    
+  rollout:
+    name: vllm
+    temperature: 1.0
+    top_k: -1 # 0 for hf rollout, -1 for vllm rollout
+    top_p: 1
+    prompt_length: ${data.max_prompt_length} 
+    response_length: ${data.max_response_length}
+    tensor_model_parallel_size: 1
+    gpu_memory_utilization: 0.8
+    max_num_seqs: 2048
+    max_model_len: 4096
+    log_prob_micro_batch_size: null # will be deprecated, use log_prob_micro_batch_size_per_gpu
+    log_prob_micro_batch_size_per_gpu: ${actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu}
+    log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+    log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
+    disable_log_stats: False
+    do_sample: True
+    n: 8
+
+  
+
+critic:
+  optim:
+    lr: 1e-5
+  model:
+    path: Qwen/Qwen2.5-Math-1.5B
+    enable_gradient_checkpointing: True
+    enable_activation_offload: True
+    use_remove_padding: True
+  ppo_micro_batch_size_per_gpu: 24
+  ppo_max_token_len_per_gpu: 72000  # (${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}) * 2
+  forward_max_token_len_per_gpu: ${critic.ppo_max_token_len_per_gpu}
+  use_dynamic_bsz: True
+
+
+algorithm:
+  gamma: 1.0
+  lam: 1.0
+  adv_norm: True
+  kl_penalty: low_var_kl  # how to estimate kl divergence
+  kl_ctrl:
+    type: fixed
+    kl_coef: 0.001
+  not_to_sum: True
+
+reward_model:
+  enable: False
+  training: False
+  enable_resource_pool: false
+  n_gpus_per_node: 0
+  nnodes: 0
+  model:
+    path: None
+    beta_train: 0.05
+    use_remove_padding: True
+    optim:
+      lr: 1e-6
+      grad_clip: 10.0
+    input_tokenizer: null
+  micro_batch_size: null
+  micro_batch_size_per_gpu: 24
+  use_dynamic_bsz: True
+  forward_max_token_len_per_gpu: 32768
+  reward_manager: batch
+
+
+custom_reward_function:
+  path: recipe/genrm_remote/reward_function_batch.py
+  name: compute_score_batch
+
+
+trainer:
+  val_before_train: True
+  n_gpus_per_node: 8
+  nnodes: 8
+  save_freq: 30
+  test_freq: 5
+  project_name: xxx
+  experiment_name: CAPO_Qwen1_5b
+  logger: wandb
+  total_epochs: 2

@@ -1,0 +1,11 @@
+dtype: bfloat16
+model: Qwen/Qwen2.5-14B-Instruct
+port: 30000
+seed: 42
+served-model-name: genrm-demo
+tensor-parallel-size: 1 
+# pipeline-parallel-size: 2
+data-parallel-size: 8
+gpu-memory-utilization: 0.95
+# max-model-len: 8192
+max_num_seqs: 1024
